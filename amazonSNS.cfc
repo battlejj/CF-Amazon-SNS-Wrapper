@@ -208,7 +208,6 @@ component accessors="true" {
 			returnSt.errorCode = xmlSearch(result,"//*[local-name()='Code']")[1].xmlText;
 			returnSt.message = xmlSearch(result,"//*[local-name()='Message']")[1].xmlText;
 		} else {
-			//sreturnSt.attributes = xmlSearch(result,"//*[local-name()='entry']");
 			returnSt.attributes = {};
 			var temp = xmlSearch(result,"//*[local-name()='entry']");
 			for(i = 1; i <= arrayLen(temp); i++){
@@ -304,7 +303,6 @@ component accessors="true" {
 			returnSt.errorCode = xmlSearch(result,"//*[local-name()='Code']")[1].xmlText;
 			returnSt.message = xmlSearch(result,"//*[local-name()='Message']")[1].xmlText;
 		} else {
-			//sreturnSt.attributes = xmlSearch(result,"//*[local-name()='entry']");
 			returnSt.subscriptions = [];
 			var subs = xmlSearch(result,"//*[local-name()='member']");
 			for(i = 1; i <= arrayLen(subs); i++){
@@ -323,11 +321,10 @@ component accessors="true" {
 		return returnSt;
 	}
 	
-	public array function listTopics(){
+	public struct function listTopics(){
 		var action = "ListTopics";
 		var timeStamp = amazonDateFormat(now());	
 		var signature = generateSignature(action=action,timestamp=timeStamp);
-		var topics = [];
 		var httpService = new http(); 
 		httpService.setCharset("utf-8"); 
 		httpService.setMethod("GET"); 
@@ -340,14 +337,24 @@ component accessors="true" {
 		httpService.addParam(type="URL",name="Signature",value=trim(signature));
 		
 		var result = httpService.send().getPrefix().fileContent;
+		var returnSt = { success = true };
 		
-		//fucking xml search and namespaces, no good
-		var topicsArray = xmlSearch(result,"//*[local-name()='TopicArn']");
-		for(var i = 1; i <= arrayLen(topicsArray); i++){
-			arrayAppend(topics,topicsArray[i].XmlText);
+		if(arrayLen(xmlSearch(result,"//*[local-name()='Error']"))){
+			returnSt.success = false;
+			returnSt.errorCode = xmlSearch(result,"//*[local-name()='Code']")[1].xmlText;
+			returnSt.message = xmlSearch(result,"//*[local-name()='Message']")[1].xmlText;
+		} else {
+			var topicsArray = xmlSearch(result,"//*[local-name()='TopicArn']");
+			
+			returnSt.topics = [];
+			
+			for(var i = 1; i <= arrayLen(topicsArray); i++){
+				arrayAppend(returnSt.topics,topicsArray[i].XmlText);
+			}
+			returnSt.message = "Topics retreived successfully.";
 		}
 				
-		return topics;
+		return returnSt;
 	}
 	
 	public struct function publish(required string Message, required string TopicArn , string Subject = '', string MessageStructure = ''){
